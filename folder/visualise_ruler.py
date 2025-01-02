@@ -1,67 +1,81 @@
 import math
 import os
 
-def add_red_line_to_obj(obj_file, output_file, focus_point, fb_tilt, side_tilt):
+def add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt, num_points=1000):
+    """
+    Add a series of points at regular intervals between two endpoints in an OBJ file.
+
+    Args:
+        obj_file (str): Path to the input OBJ file.
+        focus_point (tuple): Coordinates of the focus point (x, y, z).
+        fb_tilt (float): Front-back tilt in degrees.
+        side_tilt (float): Side tilt in degrees.
+        num_points (int): Number of points to add between the endpoints (default: 1000).
+
+    Returns:
+        str: Path to the output OBJ file with the added points.
+    """
+    # Focus point coordinates
     x, y, z = focus_point
 
-    # Convert angles to radians
+    # Calculate tilt angles in radians
     fb_tilt_rad = math.radians(fb_tilt)
     side_tilt_rad = math.radians(side_tilt)
 
-    # Calculate direction vector of the line based on the tilts
-    dx = math.cos(fb_tilt_rad) * math.sin(side_tilt_rad)
-    dy = math.sin(fb_tilt_rad)
-    dz = math.cos(fb_tilt_rad) * math.cos(side_tilt_rad)
+    # Line length (15 meters on either side, total 30 meters)
+    line_length = 15.0
 
-    # Normalize the direction vector
-    magnitude = math.sqrt(dx**2 + dy**2 + dz**2)
-    dx /= magnitude
-    dy /= magnitude
-    dz /= magnitude
+    # Calculate deviations for the red line
+    delta_y_fb = math.sin(fb_tilt_rad) * (line_length / 2)
+    delta_z_fb = math.cos(fb_tilt_rad) * (line_length / 2)
 
-    # Calculate endpoints of the line segment
-    half_length = 15  # Half of 30 meters
-    x1 = x - half_length * dx
-    y1 = y - half_length * dy
-    z1 = z - half_length * dz
+    delta_x_side = math.sin(side_tilt_rad) * (line_length / 2)
+    delta_y_side = math.cos(side_tilt_rad) * (line_length / 2)
 
-    x2 = x + half_length * dx
-    y2 = y + half_length * dy
-    z2 = z + half_length * dz
+    # Compute the two endpoints of the red line
+    # The focus point is the midpoint, so adjust accordingly
+    x1 = x - delta_x_side
+    y1 = y - delta_y_fb - delta_y_side
+    z1 = z - delta_z_fb
+
+    x2 = x + delta_x_side
+    y2 = y + delta_y_fb + delta_y_side
+    z2 = z + delta_z_fb
 
     # Read the original OBJ file
     with open(obj_file, 'r') as file:
-        obj_data = file.readlines()
+        lines = file.readlines()
 
-    # Count existing vertices to determine indices for the new vertices
-    vertex_count = sum(1 for line in obj_data if line.startswith('v '))
-    vertex_index1 = vertex_count + 1
-    vertex_index2 = vertex_count + 2
+    # Calculate step size for evenly spaced points
+    step_size = 1.0 / (num_points + 1)
 
-    # Add the vertices for the red line
-    obj_data.append(f"v {x1:.6f} {y1:.6f} {z1:.6f} 1.0 0.0 0.0\n")  # Red vertex
-    obj_data.append(f"v {x2:.6f} {y2:.6f} {z2:.6f} 1.0 0.0 0.0\n")  # Red vertex
+    # Add points at regular intervals
+    for i in range(1, num_points + 1):
+        t = i * step_size
+        x_point = x1 + (x2 - x1) * t
+        y_point = y1 + (y2 - y1) * t
+        z_point = z1 + (z2 - z1) * t
+        lines.append(f"v {x_point} {y_point} {z_point}\n")
 
-    # Add the line segment using proper indices
-    obj_data.append(f"l {vertex_index1} {vertex_index2}\n")  # Line connecting the two vertices
+    # Determine output file name
+    base_name, ext = os.path.splitext(obj_file)
+    output_file = f"{base_name}_with_points{ext}"
 
-    # Write to the output OBJ file
+    # Write the modified OBJ file
     with open(output_file, 'w') as file:
-        file.writelines(obj_data)
+        file.writelines(lines)
 
-    print(f"Red line added to OBJ file. Output saved to: {output_file}")
+    return output_file
 
+# Example usage
 if __name__ == "__main__":
-    # Input from the user
     obj_file = input("Enter the path to the input OBJ file: ").strip()
-    focus_x = float(input("Enter the X coordinate of the focus point: ").strip())
-    focus_y = float(input("Enter the Y coordinate of the focus point: ").strip())
-    focus_z = float(input("Enter the Z coordinate of the focus point: ").strip())
-    fb_tilt = float(input("Enter the front/back tilt angle in degrees: ").strip())
-    side_tilt = float(input("Enter the side tilt angle in degrees: ").strip())
+    focus_x = float(input("Enter the x-coordinate of the focus point: "))
+    focus_y = float(input("Enter the y-coordinate of the focus point: "))
+    focus_z = float(input("Enter the z-coordinate of the focus point: "))
+    focus_point = (focus_x, focus_y, focus_z)
+    fb_tilt = float(input("Enter the front-back tilt in degrees: "))
+    side_tilt = float(input("Enter the side tilt in degrees: "))
 
-    # Generate the output file name
-    output_file = os.path.splitext(obj_file)[0] + "_with_red_line.obj"
-
-    # Add the red line to the OBJ file
-    add_red_line_to_obj(obj_file, output_file, (focus_x, focus_y, focus_z), fb_tilt, side_tilt)
+    output_file = add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt)
+    print(f"Modified OBJ file saved as: {output_file}")
