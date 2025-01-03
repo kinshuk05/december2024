@@ -1,7 +1,6 @@
 import math
 import os
 
-
 def calculate_range_y(obj_file):
     """
     Calculate the range of y-coordinates in the given OBJ file.
@@ -17,13 +16,12 @@ def calculate_range_y(obj_file):
     with open(obj_file, 'r') as file:
         for line in file:
             if line.startswith("v "):
-                _, _, y, _ = line.split()
-                y = float(y)
+                components = line.split()
+                y = float(components[2])  # Extract the y-coordinate
                 min_y = min(min_y, y)
                 max_y = max(max_y, y)
 
     return max_y - min_y
-
 
 def add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt, num_points=1000):
     """
