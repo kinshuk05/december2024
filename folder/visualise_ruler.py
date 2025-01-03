@@ -71,6 +71,19 @@ def add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt, num_points=1000
     with open(obj_file, 'r') as file:
         lines = file.readlines()
 
+    # Separate sections of the file
+    vertices = []
+    normals = []
+    other_lines = []
+
+    for line in lines:
+        if line.startswith("v "):
+            vertices.append(line)
+        elif line.startswith("vn "):
+            normals.append(line)
+        else:
+            other_lines.append(line)
+
     # Calculate step size for evenly spaced points
     step_size = 1.0 / (num_points + 1)
 
@@ -80,15 +93,17 @@ def add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt, num_points=1000
         x_point = x1 + (x2 - x1) * t
         y_point = y1 + (y2 - y1) * t
         z_point = z1 + (z2 - z1) * t
-        lines.append(f"v {x_point} {y_point} {z_point}\n")
+        vertices.append(f"v {x_point} {y_point} {z_point}\n")
 
     # Determine output file name
     base_name, ext = os.path.splitext(obj_file)
     output_file = f"{base_name}_with_points{ext}"
 
-    # Write the modified OBJ file
+    # Write the modified OBJ file, preserving all information
     with open(output_file, 'w') as file:
-        file.writelines(lines)
+        file.writelines(vertices)
+        file.writelines(normals)
+        file.writelines(other_lines)
 
     return output_file
 
