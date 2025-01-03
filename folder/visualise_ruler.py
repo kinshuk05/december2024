@@ -1,6 +1,30 @@
 import math
 import os
 
+
+def calculate_range_y(obj_file):
+    """
+    Calculate the range of y-coordinates in the given OBJ file.
+
+    Args:
+        obj_file (str): Path to the OBJ file.
+
+    Returns:
+        float: Range of y-coordinates (max_y - min_y).
+    """
+    min_y, max_y = float('inf'), float('-inf')
+
+    with open(obj_file, 'r') as file:
+        for line in file:
+            if line.startswith("v "):
+                _, _, y, _ = line.split()
+                y = float(y)
+                min_y = min(min_y, y)
+                max_y = max(max_y, y)
+
+    return max_y - min_y
+
+
 def add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt, num_points=1000):
     """
     Add a series of points at regular intervals between two endpoints in an OBJ file.
@@ -22,8 +46,9 @@ def add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt, num_points=1000
     fb_tilt_rad = math.radians(fb_tilt)
     side_tilt_rad = math.radians(side_tilt)
 
-    # Line length (15 meters on either side, total 30 meters)
-    line_length = 15.0
+    # Calculate the range of y-coordinates and determine line length
+    y_range = calculate_range_y(obj_file)
+    line_length = 1.5 * y_range
 
     # Calculate deviations for the red line
     delta_y_fb = math.sin(fb_tilt_rad) * (line_length / 2)
@@ -66,6 +91,7 @@ def add_points_to_obj(obj_file, focus_point, fb_tilt, side_tilt, num_points=1000
         file.writelines(lines)
 
     return output_file
+
 
 # Example usage
 if __name__ == "__main__":
