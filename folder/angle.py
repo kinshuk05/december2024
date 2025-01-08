@@ -23,10 +23,10 @@ def calculate_angle_between_lines(axis_start, axis_end, point1, point2):
     return angle_rad, angle_deg
 
 # Example points
-axis_start = [0, 0, 0]  # Start point of first line
-axis_end = [0, 1, 0]    # End point of first line
-x1, y1, z1 = 1, 0, 0    # Start point of second line
-x2, y2, z2 = 0, 1, 0    # End point of second line
+axis_start = [ 0.1885837,  -2.61450801, -0.94083671]  # Start point of first line
+axis_end = [-0.1665417,  1.1256594, -0.996178 ]    # End point of first line
+x1, y1, z1 = 0.3250997864238513, -2.01980917502284, -0.9666000000000001     # Start point of second line
+x2, y2, z2 = -0.3472997864238513, 1.6986091750228403, -0.9665999999999999    # End point of second line
 
 # Calculate angle
 angle_rad, angle_deg = calculate_angle_between_lines(
