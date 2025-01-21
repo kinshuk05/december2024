@@ -30,7 +30,7 @@ def cylindrical_mesh_filtering(vertices, radius, anchor_point, y_threshold):
     anchor_x, anchor_y, anchor_z = anchor_point
 
     # Apply filtering
-    distances = np.sqrt((vertices[:, 0] - anchor_x) ** 2 + (vertices[:, 2] - anchor_z) ** 2)
+    distances = np.sqrt((vertices[:, 0] - anchor_x) * 2 + (vertices[:, 2] - anchor_z) * 2)
     y_diff = np.abs(vertices[:, 1] - anchor_y)
     mask = (distances <= radius) & (y_diff <= y_threshold)
 
@@ -45,12 +45,15 @@ def add_virtual_ruler(vertices, anchor_point, fb_tilt, side_tilt):
     y_range = vertices[:, 1].max() - vertices[:, 1].min()
     line_length = y_range
 
-    # Calculate ruler endpoints
+    # Front-back tilt: Tilt in the XY plane (around the X-axis)
     delta_y_fb = math.sin(fb_tilt_rad) * (line_length / 2)
     delta_z_fb = math.cos(fb_tilt_rad) * (line_length / 2)
+
+    # Side tilt: Tilt in the YZ plane (around the Z-axis)
     delta_x_side = math.sin(side_tilt_rad) * (line_length / 2)
     delta_y_side = math.cos(side_tilt_rad) * (line_length / 2)
 
+    # Calculate the start and end points of the ruler
     x1, y1, z1 = x - delta_x_side, y - delta_y_fb - delta_y_side, z - delta_z_fb
     x2, y2, z2 = x + delta_x_side, y + delta_y_fb + delta_y_side, z + delta_z_fb
 
