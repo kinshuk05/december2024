@@ -1,102 +1,69 @@
 import numpy as np
 import math
 from sklearn.decomposition import PCA
-import os
-import re 
 
+# User input
 input_file = input("Enter the input OBJ file path: ")
-anchor_x = float(input("Enter the X coordinate of the anchor point: "))
-anchor_y = float(input("Enter the Y coordinate of the anchor point: "))
-anchor_z = float(input("Enter the Z coordinate of the anchor point: "))
+anchor_x, anchor_y, anchor_z = map(float, input("Enter the anchor point coordinates (x y z): ").split())
 fb_tilt = float(input("Enter the front-back tilt (negative for back tilt): "))
 side_tilt = float(input("Enter the side tilt (negative for left tilt): "))
 
+# Constants
 radius = 0.3
 y_threshold = 0.2
 anchor_point = (anchor_x, anchor_y, anchor_z)
 
 def load_obj_mesh(obj_file):
-    """ Parse the .obj file to extract vertices. """
+    """Load vertices from an OBJ file."""
     vertices = []
     with open(obj_file, 'r') as f:
         for line in f:
-            if line.startswith('v '):  # Vertex
-                parts = line.split()
-                vertices.append([float(p) for p in parts[1:4]])
+            if line.startswith('v '):  # Vertex line
+                vertices.append(list(map(float, line.split()[1:4])))
     return np.array(vertices)
 
 def cylindrical_mesh_filtering(vertices, radius, anchor_point, y_threshold):
-    """ Filter the mesh to retain vertices inside a cylinder. """
-    anchor_x, anchor_y, anchor_z = anchor_point
+    """Filter vertices inside a cylinder centered at the anchor point."""
+    ax, ay, az = anchor_point
+    distances = np.sqrt((vertices[:, 0] - ax) ** 2 + (vertices[:, 2] - az) ** 2)
+    y_diff = np.abs(vertices[:, 1] - ay)
+    return vertices[(distances <= radius) & (y_diff <= y_threshold)]
 
-    # Apply filtering
-    distances = np.sqrt((vertices[:, 0] - anchor_x) * 2 + (vertices[:, 2] - anchor_z) * 2)
-    y_diff = np.abs(vertices[:, 1] - anchor_y)
-    mask = (distances <= radius) & (y_diff <= y_threshold)
+def add_virtual_ruler(anchor_point, fb_tilt, side_tilt, length):
+    """Create a virtual ruler based on tilt angles."""
+    ax, ay, az = anchor_point
+    fb_tilt_rad, side_tilt_rad = map(math.radians, (fb_tilt, side_tilt))
 
-    return vertices[mask]
+    # Calculate displacements due to tilts
+    delta_y_fb, delta_z_fb = math.sin(fb_tilt_rad) * (length / 2), math.cos(fb_tilt_rad) * (length / 2)
+    delta_x_side, delta_y_side = math.sin(side_tilt_rad) * (length / 2), math.cos(side_tilt_rad) * (length / 2)
 
-def add_virtual_ruler(vertices, anchor_point, fb_tilt, side_tilt):
-    """ Add a virtual ruler to the vertices. """
-    x, y, z = anchor_point
-    fb_tilt_rad = math.radians(fb_tilt)
-    side_tilt_rad = math.radians(side_tilt)
-
-    y_range = vertices[:, 1].max() - vertices[:, 1].min()
-    line_length = y_range
-
-    # Front-back tilt: Tilt in the XY plane (around the X-axis)
-    delta_y_fb = math.sin(fb_tilt_rad) * (line_length / 2)
-    delta_z_fb = math.cos(fb_tilt_rad) * (line_length / 2)
-
-    # Side tilt: Tilt in the YZ plane (around the Z-axis)
-    delta_x_side = math.sin(side_tilt_rad) * (line_length / 2)
-    delta_y_side = math.cos(side_tilt_rad) * (line_length / 2)
-
-    # Calculate the start and end points of the ruler
-    x1, y1, z1 = x - delta_x_side, y - delta_y_fb - delta_y_side, z - delta_z_fb
-    x2, y2, z2 = x + delta_x_side, y + delta_y_fb + delta_y_side, z + delta_z_fb
-
-    return (x1, y1, z1), (x2, y2, z2)
+    # Define ruler endpoints
+    return [(ax - delta_x_side, ay - delta_y_fb - delta_y_side, az - delta_z_fb),
+            (ax + delta_x_side, ay + delta_y_fb + delta_y_side, az + delta_z_fb)]
 
 def calculate_principal_axis(vertices):
-    """ Perform PCA to determine the principal axis. """
-    pca = PCA(n_components=3)
-    pca.fit(vertices)
-    principal_axis = pca.components_[0]
-    centroid = pca.mean_
-
+    """Perform PCA to determine the principal axis."""
+    pca = PCA(n_components=3).fit(vertices)
+    principal_axis, centroid = pca.components_[0], pca.mean_
+    
     projections = vertices @ principal_axis
     min_proj, max_proj = projections.min(), projections.max()
 
-    axis_start = centroid + min_proj * principal_axis
-    axis_end = centroid + max_proj * principal_axis
+    return centroid + min_proj * principal_axis, centroid + max_proj * principal_axis
 
-    return axis_start, axis_end
+def calculate_angle(v1_start, v1_end, v2_start, v2_end):
+    """Calculate the angle between two vectors."""
+    v1, v2 = np.array(v1_end) - v1_start, np.array(v2_end) - v2_start
+    v1, v2 = v1 / np.linalg.norm(v1), v2 / np.linalg.norm(v2)
 
-def calculate_angle(axis_start, axis_end, ruler_start, ruler_end):
-    """ Calculate the angle between the principal axis and the virtual ruler. """
-    vector1 = np.array(axis_end) - np.array(axis_start)
-    vector2 = np.array(ruler_end) - np.array(ruler_start)
+    return np.degrees(np.arccos(np.clip(np.dot(v1, v2), -1.0, 1.0)))
 
-    vector1 /= np.linalg.norm(vector1)
-    vector2 /= np.linalg.norm(vector2)
-
-    dot_product = np.dot(vector1, vector2)
-    angle_rad = np.arccos(np.clip(dot_product, -1.0, 1.0))
-    return np.degrees(angle_rad)
-
-# Load mesh and filter
+# Processing
 vertices = load_obj_mesh(input_file)
 filtered_vertices = cylindrical_mesh_filtering(vertices, radius, anchor_point, y_threshold)
-
-# Add a virtual ruler
-ruler_start, ruler_end = add_virtual_ruler(filtered_vertices, anchor_point, fb_tilt, side_tilt)
-
-# Determine the principal axis
+ruler_start, ruler_end = add_virtual_ruler(anchor_point, fb_tilt, side_tilt, filtered_vertices[:, 1].ptp())
 axis_start, axis_end = calculate_principal_axis(filtered_vertices)
-
-# Calculate the angle between the principal axis and the virtual ruler
 angle = calculate_angle(axis_start, axis_end, ruler_start, ruler_end)
 
 print(f"Angle between principal axis and virtual ruler: {angle:.2f} degrees")
