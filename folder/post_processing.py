@@ -85,8 +85,8 @@ def calculate_angle(v1_start, v1_end, v2_start, v2_end):
 vertices = load_obj_mesh(input_file)
 filtered_vertices = cylindrical_mesh_filtering(vertices, radius, anchor_point, y_threshold)
 
-# Use the y-range of the filtered vertices as the ruler length
-ruler_length = filtered_vertices[:, 1].ptp()
+# Use np.ptp(...) instead of .ptp() to support NumPy 2.0
+ruler_length = np.ptp(filtered_vertices[:, 1])
 
 # Compute virtual ruler and principal axis
 ruler_start, ruler_end = add_virtual_ruler(anchor_point, fb_tilt, side_tilt, ruler_length)
@@ -94,13 +94,13 @@ axis_start, axis_end   = calculate_principal_axis(filtered_vertices, anchor_poin
 angle = calculate_angle(axis_start, axis_end, ruler_start, ruler_end)
 print(f"Angle between principal axis and virtual ruler: {angle:.2f} degrees")
 
-# Generate 1000 points along the principal axis and the virtual ruler using loops.
+# Generate 1000 points along the principal axis and the virtual ruler
 num_points = 1000
 principal_points = []
 ruler_points = []
 
 for i in range(num_points):
-    t = i / (num_points - 1)  # parameter t in [0,1]
+    t = i / (num_points - 1)
     # Compute point on the principal axis
     pt_axis = [axis_start[j] + t * (axis_end[j] - axis_start[j]) for j in range(3)]
     principal_points.append(pt_axis)
@@ -110,11 +110,6 @@ for i in range(num_points):
     ruler_points.append(pt_ruler)
 
 # Write all points to a single PLY file.
-# Colors:
-#   - Filtered vertices: white (255, 255, 255)
-#   - Principal axis points: blue (0, 0, 255)
-#   - Virtual ruler points: red (255, 0, 0)
-#   - Anchor point: green (0, 255, 0)
 def write_all_to_ply(filename, filtered_pts, principal_pts, ruler_pts, anchor_pt):
     total_pts = len(filtered_pts) + len(principal_pts) + len(ruler_pts) + 1  # +1 for the anchor point
     with open(filename, 'w') as f:
@@ -130,21 +125,21 @@ def write_all_to_ply(filename, filtered_pts, principal_pts, ruler_pts, anchor_pt
         f.write("property uchar blue\n")
         f.write("end_header\n")
         
-        # Write filtered vertices (white)
+        # Filtered vertices: white
         for pt in filtered_pts:
             f.write(f"{pt[0]} {pt[1]} {pt[2]} 255 255 255\n")
         
-        # Write principal axis points (blue)
+        # Principal axis points: blue
         for pt in principal_pts:
             f.write(f"{pt[0]} {pt[1]} {pt[2]} 0 0 255\n")
         
-        # Write virtual ruler points (red)
+        # Virtual ruler points: red
         for pt in ruler_pts:
             f.write(f"{pt[0]} {pt[1]} {pt[2]} 255 0 0\n")
         
-        # Write the anchor point (green)
+        # Anchor point: green
         f.write(f"{anchor_pt[0]} {anchor_pt[1]} {anchor_pt[2]} 0 255 0\n")
 
-output_filename = "combined_output.ply"
+output_filename = "/Users/kinshuksingh/Downloads/combined_output.ply"
 write_all_to_ply(output_filename, filtered_vertices, principal_points, ruler_points, anchor_point)
 print(f"Combined PLY file generated: '{output_filename}'.")
