@@ -10,7 +10,7 @@ from writing import write_all_to_ply
 def main():
     # 1) Get user input
     input_file = input("Enter the input OBJ file path: ")
-    anchor_x, anchor_y, anchor_z = map(float, input("Enter the anchor point coordinates (x y z): ").split())
+    anchor_x, anchor_y, anchor_z = map(float, input("Enter the anchor point coordinates x y z separated by spaces: ").split())
     fb_tilt = float(input("Enter the front-back tilt (negative for back tilt): "))
     side_tilt = float(input("Enter the side tilt (negative for left tilt): "))
 
