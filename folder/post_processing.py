@@ -25,7 +25,6 @@ def main():
     filtered_vertices = cylindrical_mesh_filtering(vertices, radius, anchor_point, y_threshold)
     
     # 3) Use the Y-range of the filtered vertices to define the ruler length
-    #    (np.ptp is recommended if you're using NumPy 2.0)
     ruler_length = np.ptp(filtered_vertices[:, 1])
     
     # 4) Compute the virtual ruler
